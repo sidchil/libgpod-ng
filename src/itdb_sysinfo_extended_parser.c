@@ -324,6 +324,7 @@ static void free_image_format (Itdb_ArtworkFormat *format)
 
 void itdb_sysinfo_properties_free (SysInfoIpodProperties *props)
 {
+    g_return_if_fail (props != NULL);
     g_list_foreach (props->artwork_formats, (GFunc)free_image_format, NULL);
     g_list_free (props->artwork_formats);
     g_list_foreach (props->photo_formats, (GFunc)free_image_format, NULL);
@@ -478,26 +479,26 @@ static GList *parse_one_formats_list (GHashTable *sysinfo_dict,
 {
     GValue *to_parse;
     GList *formats = NULL;
-    GValueArray *array;
+    GArray *array;
     gint i;
 
     to_parse = g_hash_table_lookup (sysinfo_dict, key);
     if (to_parse == NULL) {
         return NULL;
     }
-    if (!G_VALUE_HOLDS (to_parse, G_TYPE_VALUE_ARRAY)) {
+    if (!G_VALUE_HOLDS (to_parse, G_TYPE_ARRAY)) {
         return NULL;
     }
-    array = (GValueArray*)g_value_get_boxed (to_parse);
-    for (i = 0; i < array->n_values; i++) {
+    array = (GArray*)g_value_get_boxed (to_parse);
+    for (i = 0; i < array->len; i++) {
         Itdb_ArtworkFormat *format;
 	/* SysInfoExtended on the iPhone has <string> fields in the artwork
 	 * format array in addition to the hash we parse
 	 */
-	if (!G_VALUE_HOLDS (g_value_array_get_nth (array, i), G_TYPE_HASH_TABLE)) {
+	if (!G_VALUE_HOLDS (&g_array_index (array, GValue, i), G_TYPE_HASH_TABLE)) {
 	    continue;
 	}
-	format = g_value_to_image_format (g_value_array_get_nth (array, i));
+	format = g_value_to_image_format (&g_array_index (array, GValue, i));
 	if (format != NULL) {
 		formats = g_list_prepend (formats, format);
 	}
@@ -517,10 +518,22 @@ static SysInfoIpodProperties *g_value_to_ipod_properties (GValue *value)
     props = g_new0 (SysInfoIpodProperties, 1);
     props->artwork_formats = parse_one_formats_list (sysinfo_dict,
                                                      "AlbumArt");
+    if (props->artwork_formats == NULL) {
+	props->artwork_formats = parse_one_formats_list (sysinfo_dict,
+							 "AlbumArt2");
+    }
     props->photo_formats = parse_one_formats_list (sysinfo_dict,
                                                    "ImageSpecifications");
+    if (props->photo_formats == NULL) {
+	props->photo_formats = parse_one_formats_list (sysinfo_dict,
+						       "ImageSpecifications2");
+    }
     props->chapter_image_formats = parse_one_formats_list (sysinfo_dict,
                                                            "ChapterImageSpecs");
+    if (props->chapter_image_formats == NULL) {
+	props->chapter_image_formats = parse_one_formats_list (sysinfo_dict,
+							       "ChapterImageSpecs2");
+    }
     dict_to_struct (sysinfo_dict,
                     sysinfo_ipod_properties_fields_mapping,
                     props);

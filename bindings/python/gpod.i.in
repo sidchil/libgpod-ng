@@ -39,10 +39,8 @@ interface."
 %enddef
 
 %pythoncode %{
-version_info = (@LIBGPOD_MAJOR_VERSION@, 
-		@LIBGPOD_MINOR_VERSION@, 
-		@LIBGPOD_MICRO_VERSION@)
-version = '.'.join(map(str, version_info))  
+version = "@PACKAGE_VERSION@"
+version_info = version.split(".")
 %}
 
 %module(docstring=DOCSTRING) gpod
@@ -269,7 +267,7 @@ PyObject* sw_get_photo(GList *list, gint index) {
      g_hash_table_foreach(device->sysinfo, 
 			  hash_table_to_pydict, 
 			  (gpointer) sysinfo);
-     return Py_BuildValue("{s:s,s:i,s:i,s:O}",
+     return Py_BuildValue("{s:s,s:i,s:i,s:O,s:i}",
 			  "mountpoint",
 			  device->mountpoint,
 			  "musicdirs",
@@ -277,7 +275,9 @@ PyObject* sw_get_photo(GList *list, gint index) {
 			  "byte_order",
 			  device->byte_order,
 			  "sysinfo",
-			  sysinfo);
+			  sysinfo,
+                          "timezone_shift",
+                          device->timezone_shift);
    }
  }
 
@@ -286,7 +286,9 @@ PyObject* sw_get_photo(GList *list, gint index) {
 %init %{
 #ifdef HAVE_GDKPIXBUF
 #ifdef HAVE_PYGOBJECT
+#if !GLIB_CHECK_VERSION(2, 36, 0)
    g_type_init ();
+#endif
    init_pygobject ();
 #endif
 #endif
@@ -296,9 +298,9 @@ PyObject* sw_get_photo(GList *list, gint index) {
 %include "gpod_doc.i"
 %include "@top_builddir@/config.h"
 
-# be nicer to decode these utf8 strings into Unicode objects in the C
-# layer. Here we are leaving it to the Python side, and just giving
-# them utf8 encoded Strings.
+/* be nicer to decode these utf8 strings into Unicode objects in the C
+   layer. Here we are leaving it to the Python side, and just giving
+   them utf8 encoded Strings. */
 typedef char gchar;
 
 %typemap(in) time_t {

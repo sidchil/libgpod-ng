@@ -612,7 +612,7 @@ static int mk_Library(Itdb_iTunesDB *itdb,
     Itdb_Playlist *dev_playlist = NULL;
     int idx = 0;
     int pos = 0;
-    GHashTable *genre_map;
+    GHashTable *genre_map = NULL;
     GHashTable **orders = NULL;
     guint32 genre_index;
     printf("library_persistent_id = 0x%016"G_GINT64_MODIFIER"x\n", itdb->priv->pid);
@@ -839,7 +839,7 @@ static int mk_Library(Itdb_iTunesDB *itdb,
 	/* name order */
 	sqlite3_bind_int(stmt_container, ++idx, pos++);
 	/* parent_pid */
-	/* TODO: unkown meaning, always 0? */
+	/* TODO: unknown meaning, always 0? */
 	sqlite3_bind_int(stmt_container, ++idx, 0);
 	/* media_kinds */
 	sqlite3_bind_int(stmt_container, ++idx, types);
@@ -900,10 +900,10 @@ static int mk_Library(Itdb_iTunesDB *itdb,
 	sqlite3_bind_null(stmt_db_info, ++idx);
     }
     /* bib */
-    /* TODO: unkown meaning, set to NULL */
+    /* TODO: unknown meaning, set to NULL */
     sqlite3_bind_null(stmt_db_info, ++idx);
     /* rib */
-    /* TODO: unkown meaning, set to NULL */
+    /* TODO: unknown meaning, set to NULL */
     sqlite3_bind_null(stmt_db_info, ++idx);
 
     res = sqlite3_step(stmt_db_info);
@@ -1358,6 +1358,9 @@ leave:
     }
     if (stmt_artist) {
 	sqlite3_finalize(stmt_artist);
+    }
+    if (stmt_composer) {
+	sqlite3_finalize(stmt_composer);
     }
     if (stmt_video_info) {
 	sqlite3_finalize(stmt_video_info);
@@ -1955,7 +1958,7 @@ static void run_post_process_commands(Itdb_iTunesDB *itdb, const char *outpath, 
 			g_hash_table_destroy(sqlcmd_map);
 
 			printf("[%s] %d out of %d post process commands successfully executed\n", __func__, ok_cnt, cnt);
-			/* TODO perhaps we want to roll back when an error has occured ? */
+			/* TODO perhaps we want to roll back when an error has occurred ? */
 			sqlite3_exec(db, "COMMIT;", NULL, NULL, NULL);
 		    } else {
 			printf("[%s]: Error: could not create hash table!\n", __func__);

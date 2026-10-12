@@ -1,0 +1,10 @@
+prefix=${pcfiledir}/../..
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: libgpod
+Description: A library to manipulate songs and playlists stored on an iPod
+Version: @PROJECT_VERSION@
+Requires: @GPOD_PC_REQUIRES@
+Libs: -L${libdir} -lgpod
+Cflags: -I${includedir}/gpod-1.0

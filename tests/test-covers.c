@@ -53,7 +53,7 @@ save_itdb_thumb (Itdb_Track *track, GdkPixbuf *pixbuf, guint id)
         }
         g_print ("  %s\n", filename);
         gdk_pixbuf_save (pixbuf, filename, "png", NULL, NULL);
-        gdk_pixbuf_unref (pixbuf);
+        g_object_unref (pixbuf);
         /*		g_print ("Saved %s\n", filename); */
         g_free (filename);
 }
@@ -112,7 +112,9 @@ main (int argc, char **argv)
 	}
 	
 	setlocale (LC_ALL, "");
+#if !GLIB_CHECK_VERSION(2, 36, 0)
 	g_type_init ();
+#endif
 	db = itdb_parse (argv[1], NULL);
 	if (db == NULL) {
 		g_print ("Error reading iPod database\n");

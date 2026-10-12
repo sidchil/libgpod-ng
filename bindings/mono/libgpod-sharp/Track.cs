@@ -24,7 +24,11 @@ namespace GPod {
 	
 	
 	namespace native {
+#if ALIGNMENT_X86_LINUX
+		[StructLayout (LayoutKind.Sequential, Pack=4)]
+#else
 		[StructLayout (LayoutKind.Sequential)]
+#endif
 		internal struct Itdb_Track {
 			public IntPtr		itdb;
 			public IntPtr		title;
@@ -54,7 +58,7 @@ namespace GPod {
 			public IntPtr		sort_composer;
 			public IntPtr		sort_tvshow;
 			public uint		id;
-			public int		size;
+			public uint		size;
 			public int		tracklen;
 			public int		cd_nr;
 			public int		cds;
@@ -315,7 +319,7 @@ namespace GPod {
 			set { var x = (Itdb_Track *) Native; ReplaceStringUTF8(ref x->sort_tvshow, value); }
 		}
 		
-		public int		Size				{ get { return ((Itdb_Track *) Native)->size; }
+		public uint		Size				{ get { return ((Itdb_Track *) Native)->size; }
 									  set { ((Itdb_Track *) Native)->size = value; } }
 		public int		TrackLength			{ get { return ((Itdb_Track *) Native)->tracklen; }
 									  set { ((Itdb_Track *) Native)->tracklen = value; } }

@@ -728,7 +728,7 @@ ithumb_writer_handle_rotation (GdkPixbuf *pixbuf, guint *rotation)
   {
       return gdk_pixbuf_rotate_simple (pixbuf, *rotation);
   }
-  return g_object_ref (G_OBJECT (pixbuf));
+  return (GdkPixbuf *) g_object_ref (G_OBJECT (pixbuf));
 }
 
 /* On the iPhone, thumbnails are presented as squares in a grid.
@@ -968,7 +968,7 @@ ithumb_writer_write_thumbnail (iThumbWriter *writer,
     else if (thumb->data_type == ITDB_THUMB_TYPE_PIXBUF)
     {
         Itdb_Thumb_Pixbuf *thumb_pixbuf = (Itdb_Thumb_Pixbuf *)thumb;
-        pixbuf = g_object_ref (G_OBJECT (thumb_pixbuf->pixbuf));
+        pixbuf = (GdkPixbuf *) g_object_ref (G_OBJECT (thumb_pixbuf->pixbuf));
     }
 
     if (pixbuf == NULL)
@@ -1215,7 +1215,7 @@ static gboolean ithumb_rearrange_thumbnail_file (gpointer _key,
 
 /*     printf ("%s: %d\n", filename, g_list_length (thumbs)); */
 
-    /* check if an error occured */
+    /* check if an error occurred */
     if (*result == FALSE)
 	goto out;
 

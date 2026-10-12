@@ -23,12 +23,16 @@ int main (int argc, char **argv)
     char *mountpoint;
     Itdb_Device *device;
 
-    g_type_init();
+#if !GLIB_CHECK_VERSION(2, 36, 0)
+    g_type_init ();
+#endif
 
     if (argc >= 2) {
         mountpoint = argv[1];
     } else {
-        g_print ("Usage: %s <mountpoint>\n\n", g_basename(argv[0]));
+        char *basename = g_path_get_basename(argv[0]);
+        g_print ("Usage: %s <mountpoint>\n\n", basename);
+        g_free (basename);
         return -1;
     }
 

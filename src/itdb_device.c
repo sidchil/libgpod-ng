@@ -717,7 +717,7 @@ static const ItdbSerialToModel serial_to_model_mapping[] = {
     { "SZT", "A005" },
     { "TJT", "A099" },
     { "TJU", "A099" },
-    { "TK2", "A107" },
+    { "TK2", "A107" }, /* 4GB Black Nano 1g */
     { "TK3", "A107" },
     { "VQ5", "A477" },
     { "VQ6", "A477" },
@@ -1527,9 +1527,9 @@ itdb_device_musicdirs_number (Itdb_Device *device)
  * @path:   the file to look at.
  * @hdr:    the header string (4 bytes) in case of LITTLE_ENDIAN
  *
- * Check if endianess can be determined by looking at header of @path.
+ * Check if endianness can be determined by looking at header of @path.
  *
- * Returns: G_LITTLE_ENDIAN, G_BIG_ENDIAN or 0 if endianess could not be
+ * Returns: G_LITTLE_ENDIAN, G_BIG_ENDIAN or 0 if endianness could not be
  * determined.
  */
 static guint endianess_check_path (const gchar *path, const gchar *hdr)
@@ -1565,7 +1565,7 @@ static guint endianess_check_path (const gchar *path, const gchar *hdr)
     return byte_order;
 }
 
-/* Attempt to guess the endianess used by this iPod.
+/* Attempt to guess the endianness used by this iPod.
  *
  * It will overwrite the previous setting.
  *
@@ -1669,7 +1669,7 @@ const gchar *itdb_info_get_ipod_model_name_string (Itdb_IpodModel model)
        verify if @model is valid */
     while (ipod_model_name_table[i])
     {
-	if (i==model)  return gettext (ipod_model_name_table[i]);
+	if (i==model)  return _(ipod_model_name_table[i]);
 	++i;
     }
     return NULL;
@@ -1697,7 +1697,7 @@ const gchar *itdb_info_get_ipod_generation_string (Itdb_IpodGeneration generatio
     while (ipod_generation_name_table[i])
     {
 	if (i==generation)
-	    return gettext (ipod_generation_name_table[i]);
+	    return _(ipod_generation_name_table[i]);
 	++i;
     }
     return NULL;

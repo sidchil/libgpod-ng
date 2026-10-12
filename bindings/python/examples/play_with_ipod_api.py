@@ -1,8 +1,13 @@
 #!/usr/bin/python
 
 import gpod
+import sys
 
-db = gpod.Database()
+if len(sys.argv) > 1:
+    db = gpod.Database(sys.argv[1])
+else:
+    db = gpod.Database()
+
 
 print db
 

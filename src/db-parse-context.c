@@ -40,6 +40,10 @@
 #include "db-itunes-parser.h"
 #include "itdb_endianness.h"
 
+#ifndef HAVE_G_MAPPED_FILE_UNREF
+#define g_mapped_file_unref(f) g_mapped_file_free(f)
+#endif
+
 DBParseContext *
 db_parse_context_new (const unsigned char *buffer, off_t len, guint byte_order)
 {
@@ -64,7 +68,7 @@ db_parse_context_destroy (DBParseContext *ctx)
 	g_return_if_fail (ctx != NULL);
 
 	if (ctx->mapped_file) {
-		g_mapped_file_free(ctx->mapped_file);
+		g_mapped_file_unref(ctx->mapped_file);
 	}
 
 	g_free (ctx);
@@ -215,7 +219,7 @@ db_parse_context_new_from_file (const char *filename, Itdb_DB *db)
 					device->byte_order);
 
 	if (ctx == NULL) {
-		g_mapped_file_free(mapped_file);
+		g_mapped_file_unref(mapped_file);
 		return NULL;
 	}
 	ctx->db = db;

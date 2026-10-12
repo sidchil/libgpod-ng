@@ -265,7 +265,7 @@ typedef enum {
 /**
  * Itdb_IpodInfo:
  * @model_number:    The model number.  This is abbreviated.  If the first
- *                   character is not numeric, it is ommited. e.g.
+ *                   character is not numeric, it is omitted. e.g.
  *                   "MA350 -> A350", "M9829 -> 9829"
  * @capacity:        The iPod's capacity in gigabytes
  * @ipod_model:      The iPod model
@@ -411,7 +411,7 @@ typedef enum {
     ITDB_LIMITSORT_MOST_RECENTLY_PLAYED = 0x15,
     ITDB_LIMITSORT_LEAST_RECENTLY_PLAYED = 0x80000015,/* See note above */
     ITDB_LIMITSORT_HIGHEST_RATING = 0x17,
-    ITDB_LIMITSORT_LOWEST_RATING = 0x80000017,        /* See note above */
+    ITDB_LIMITSORT_LOWEST_RATING = 0x80000017         /* See note above */
 } ItdbLimitSort;
 
 /**
@@ -502,7 +502,7 @@ typedef enum {
     ITDB_SPLACTION_IS_NOT = 0x03000001,
     ITDB_SPLACTION_DOES_NOT_CONTAIN = 0x03000002,
     ITDB_SPLACTION_DOES_NOT_START_WITH = 0x03000004,
-    ITDB_SPLACTION_DOES_NOT_END_WITH = 0x03000008,
+    ITDB_SPLACTION_DOES_NOT_END_WITH = 0x03000008
 } ItdbSPLAction;
 
 /**
@@ -579,7 +579,7 @@ typedef enum
 typedef enum {
     ITDB_SPLACTION_LAST_DAYS_VALUE = 86400,    /* nr of secs in 24 hours */
     ITDB_SPLACTION_LAST_WEEKS_VALUE = 604800,  /* nr of secs in 7 days   */
-    ITDB_SPLACTION_LAST_MONTHS_VALUE = 2628000,/* nr of secs in 30.4167
+    ITDB_SPLACTION_LAST_MONTHS_VALUE = 2628000 /* nr of secs in 30.4167
 						  days ~= 1 month */
 } ItdbSPLActionLast;
 
@@ -1631,7 +1631,7 @@ struct _Itdb_Track
   gchar   *sort_tvshow;
 /* end of new fields in libgpod 0.5.0 */
   guint32 id;
-  gint32  size;
+  guint32  size;
   gint32  tracklen;
   gint32  cd_nr;
   gint32  cds;
@@ -1747,7 +1747,7 @@ struct _Itdb_Track
 
 /**
  * ItdbFileError:
- * @ITDB_FILE_ERROR_SEEK:         file corrupt: illegal seek occured
+ * @ITDB_FILE_ERROR_SEEK:         file corrupt: illegal seek occurred
  * @ITDB_FILE_ERROR_CORRUPT:      file corrupt
  * @ITDB_FILE_ERROR_NOTFOUND:     file not found
  * @ITDB_FILE_ERROR_RENAME:       file could not be renamed
@@ -2030,15 +2030,6 @@ gboolean itdb_init_ipod (const gchar *mountpoint,
 			 const gchar *model_number,
 			 const gchar *ipod_name,
 			 GError **error);
-
-/* Additional third party integration points */
-
-/* Allows third party applications to store device directory
- * in a different location. If you set the resolution function,
- * make sure it ruturns a string that can be freed with g_free. */
-typedef gchar *(* ItdbDeviceDirResolutionFunc) (const gchar *mountpoint);
-void itdb_set_device_dir_resolution (ItdbDeviceDirResolutionFunc func);
-ItdbDeviceDirResolutionFunc itdb_get_device_dir_resolution (void);
 
 G_END_DECLS
 

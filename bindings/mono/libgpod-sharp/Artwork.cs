@@ -22,9 +22,15 @@ namespace GPod {
 	using GLib;
 	using Gdk;
 	using native;
+
+	using DateTime = System.DateTime;
 	
 	namespace native {
+#if ALIGNMENT_X86_LINUX
+		[StructLayout (LayoutKind.Sequential, Pack=4)]
+#else
 		[StructLayout (LayoutKind.Sequential)]
+#endif
 		internal struct Itdb_Artwork {
 			public IntPtr thumbnail;
 			public uint   id;

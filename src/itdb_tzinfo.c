@@ -160,7 +160,7 @@ static gboolean raw_timezone_to_utc_shift_5g (gint16 raw_timezone,
      * going from Tokyo to LA and then to Europe).
      * The calculation below shifts the origin so that 0 corresponds
      * to UTC-12 and the max is 24*60 and corresponds to UTC+12
-     * Finally, we substract 12*60 to that value to get a signed number
+     * Finally, we subtract 12*60 to that value to get a signed number
      * giving the timezone relative to UTC.
      */
     *utc_shift = raw_timezone*60 - TZ_SHIFT*3600;
@@ -272,6 +272,7 @@ G_GNUC_INTERNAL void itdb_device_set_timezone_info (Itdb_Device *device)
 	    raw_timezone_converter = raw_timezone_to_utc_shift_5g;
 	    break;
 	case 2952: /* seen on nano 3g and iPod classic */
+	case 2956: /* seen on iPod classic */
 	case 2960: /* seen on nano 4g */
 	    offset = 0xb70;
 	    raw_timezone_converter = raw_timezone_to_utc_shift_6g;

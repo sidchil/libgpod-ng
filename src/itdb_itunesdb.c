@@ -233,8 +233,6 @@ enum MHOD_ID {
    (track) IDs before writing out the iTunesDB. */
 static const gint FIRST_IPOD_ID=52;
 
-static ItdbDeviceDirResolutionFunc device_dir_resolution_func;
-
 
 enum MHOD52_SORTTYPE {
     MHOD52_SORTTYPE_TITLE    = 0x03,
@@ -422,80 +420,18 @@ static void itdb_fsync (void)
 gchar * itdb_resolve_path (const gchar *root,
 			   const gchar * const * components)
 {
-  gchar *good_path = g_strdup(root);
-  guint32 i;
+  gchar *absolute_path;
+  gchar *rel_path;
 
   if (!root) return NULL;
-
-  for(i = 0 ; components[i] ; i++) {
-    GDir *cur_dir;
-    gchar *component_as_filename;
-    gchar *test_path;
-    gchar *component_stdcase;
-    const gchar *dir_file=NULL;
-
-    /* skip empty components */
-    if (strlen (components[i]) == 0) continue;
-    component_as_filename = 
-      g_filename_from_utf8(components[i],-1,NULL,NULL,NULL);
-    test_path = g_build_filename(good_path,component_as_filename,NULL);
-    g_free(component_as_filename);
-    if(g_file_test(test_path,G_FILE_TEST_EXISTS)) {
-      /* This component does not require fixup */
-      g_free(good_path);
-      good_path = test_path;
-      continue;
-    }
-    g_free(test_path);
-    component_stdcase = g_utf8_casefold(components[i],-1);
-    /* Case insensitively compare the current component with each entry
-     * in the current directory. */
-
-    cur_dir = g_dir_open(good_path,0,NULL);
-    if (cur_dir) while ((dir_file = g_dir_read_name(cur_dir)))
-    {
-	gchar *file_utf8;
-	gchar *file_stdcase;
-	gboolean found;
-	gchar *new_good_path;
-      
-	file_utf8 = g_filename_to_utf8(dir_file,-1,NULL,NULL,NULL);
-	if (file_utf8 == NULL) {
-	    continue;
-	}
-	file_stdcase = g_utf8_casefold(file_utf8,-1);
-	g_free(file_utf8);
-	found = !g_utf8_collate(file_stdcase,component_stdcase);
-	g_free(file_stdcase);
-	if(!found)
-	{
-	    /* This is not the matching entry */
-	    continue;
-	}
-      
-	new_good_path = g_build_filename(good_path,dir_file,NULL);
-	g_free(good_path);
-	good_path= new_good_path;
-	/* This is the matching entry, so we can stop searching */
-	break;
-    }
-    
-    if(!dir_file) {
-      /* We never found a matching entry */
-      g_free(good_path);
-      good_path = NULL;
-    }
-
-    g_free(component_stdcase);
-    if (cur_dir) g_dir_close(cur_dir);
-    if(!good_path || !g_file_test(good_path,G_FILE_TEST_EXISTS))
-      break; /* We couldn't fix this component, so don't try later ones */
+  rel_path = g_build_filenamev ((gchar **)components);
+  absolute_path = g_build_filename (root, rel_path, NULL);
+  g_free (rel_path);
+  if (g_file_test (absolute_path, G_FILE_TEST_EXISTS)) {
+    return absolute_path;
   }
-    
-  if(good_path && g_file_test(good_path,G_FILE_TEST_EXISTS))
-    return good_path;
+  g_free (absolute_path);
 
-  g_free (good_path);
   return NULL;
 }
 
@@ -977,12 +913,13 @@ static gboolean playcounts_read (FImport *fimp, FContents *cts)
     for (i=0; i<entry_num; ++i)
     {
 	guint32 mac_time;
-	struct playcount *playcount = g_new0 (struct playcount, 1);
+	struct playcount *playcount;
 	glong seek = header_length + i*entry_length;
 
 	check_seek (cts, seek, entry_length);
 	CHECK_ERROR (fimp, FALSE);	
 
+	playcount = g_new0 (struct playcount, 1);
 	playcounts = g_list_prepend (playcounts, playcount);
 	playcount->playcount = get32lint (cts, seek);	
 	mac_time = get32lint (cts, seek+4);
@@ -1134,6 +1071,20 @@ static gint64 playcounts_plist_get_gint64 (GHashTable *track_dict,
     return 0;
 }
 
+#ifndef HAVE_G_INT64_EQUAL
+static gboolean g_int64_equal (gconstpointer v1, gconstpointer v2)
+{
+  return *((const gint64*) v1) == *((const gint64*) v2);
+}
+#endif
+
+#ifndef HAVE_G_INT64_HASH
+static guint g_int64_hash (gconstpointer v)
+{
+  return (guint) *(const gint64*) v;
+}
+#endif
+
 /* called by playcounts_init */
 static gboolean playcounts_plist_read (FImport *fimp, GValue *plist_data)
 {
@@ -1141,7 +1092,7 @@ static gboolean playcounts_plist_read (FImport *fimp, GValue *plist_data)
     struct playcount *playcount;
     GHashTable *pc_dict, *track_dict;
     GValue *to_parse;
-    GValueArray *array;
+    GArray *array;
     gint i;
     guint32 mac_time;
     guint64 *dbid;
@@ -1153,19 +1104,19 @@ static gboolean playcounts_plist_read (FImport *fimp, GValue *plist_data)
     if (to_parse == NULL) {
         return FALSE;
     }
-    if (!G_VALUE_HOLDS (to_parse, G_TYPE_VALUE_ARRAY)) {
+    if (!G_VALUE_HOLDS (to_parse, G_TYPE_ARRAY)) {
         return FALSE;
     }
 
     playcounts = g_hash_table_new_full (g_int64_hash, g_int64_equal, g_free, g_free);
 
-    array = (GValueArray*)g_value_get_boxed (to_parse);
-    for (i = 0; i < array->n_values; i++) {
-       if (!G_VALUE_HOLDS (g_value_array_get_nth (array, i), G_TYPE_HASH_TABLE)) {
+    array = (GArray*)g_value_get_boxed (to_parse);
+    for (i = 0; i < array->len; i++) {
+       if (!G_VALUE_HOLDS (g_array_index (array, GValue *, i), G_TYPE_HASH_TABLE)) {
           continue;
        }
 
-       track_dict = g_value_get_boxed (g_value_array_get_nth (array, i));
+       track_dict = g_value_get_boxed (g_array_index (array, GValue *, i));
        if (track_dict == NULL)
            continue;
 
@@ -1357,8 +1308,7 @@ void itdb_free (Itdb_iTunesDB *itdb)
 	            (GFunc)(itdb_playlist_free), NULL);
 	    }
 
-	    if (itdb->priv->genius_cuid)
-	        g_free(itdb->priv->genius_cuid);
+	    g_free(itdb->priv->genius_cuid);
 	}
 
 	g_list_free (itdb->playlists);
@@ -1369,7 +1319,6 @@ void itdb_free (Itdb_iTunesDB *itdb)
 	itdb_device_free (itdb->device);
 	if (itdb->userdata && itdb->userdata_destroy)
 	    (*itdb->userdata_destroy) (itdb->userdata);
-	g_free (itdb->priv->genius_cuid);
 	g_free (itdb->priv);
 	g_free (itdb);
     }
@@ -1458,10 +1407,14 @@ guint32 itdb_tracks_number_nontransferred (Itdb_iTunesDB *itdb)
  */
 Itdb_iTunesDB *itdb_new (void)
 {
-    static GOnce g_type_init_once = G_ONCE_INIT;
     Itdb_iTunesDB *itdb;
 
+#if !GLIB_CHECK_VERSION(2, 36, 0)
+    /* g_type_init() is obsolete with newer glib versions */
+    static GOnce g_type_init_once = G_ONCE_INIT;
     g_once (&g_type_init_once, (GThreadFunc)g_type_init, NULL);
+#endif
+
     itdb = g_new0 (Itdb_iTunesDB, 1);
     itdb->priv = g_new0 (Itdb_iTunesDB_Private, 1);
     itdb->device = itdb_device_new ();
@@ -1544,7 +1497,7 @@ static char *extract_mhod_string (FContents *cts, glong seek)
    Itdb_SPLPREF OR Itdb_SPLRULES.
 
    *mhod_len is set to the total length of the mhod (-1 in case an
-   *error occured).
+   *error occurred).
 
    MHODData.valid is set to FALSE in case of any error. cts->error
    will be set accordingly.
@@ -1958,13 +1911,13 @@ static void set_error_a_header_smaller_than_b (GError **error,
 }
 
 
-/* finds next occurence of section @a in section b (@b_seek) starting
+/* finds next occurrence of section @a in section b (@b_seek) starting
    at @start_seek
 */
 /* Return value:
    -1 and cts->error not set: section @a could not be found
-   -1 and cts->error set: some error occured
-   >=0: start of next occurence of section @a
+   -1 and cts->error set: some error occurred
+   >=0: start of next occurrence of section @a
 */
 static glong find_next_a_in_b (FContents *cts,
 			       const gchar *a,
@@ -1985,7 +1938,6 @@ static glong find_next_a_in_b (FContents *cts,
     if (cts->error) return -1;
 
     offset = start_seek - b_seek;
-    len = 0;
     do
     {   /* skip headers inside the b hunk (b_len) until we find header
 	   @a */
@@ -2380,7 +2332,7 @@ static glong get_playlist (FImport *fimp, guint mhsd_type, glong mhyp_seek)
 
   mhip_seek = mhod_seek;
 
-  i=0; /* tracks read */
+  /* tracks read */
   for (i=0; i < mhipnum; ++i)
   {
       mhip_seek = get_mhip (fimp, mhip_seek);
@@ -2752,7 +2704,7 @@ static glong get_mhit (FImport *fimp, glong mhit_seek)
  * adding a new playlist (named @plname) with the tracks specified in
  * @cts. If @plname is NULL, a standard name will be substituted */
 /* Returns FALSE on error, TRUE on success. On error @fimp->error will
- * be set apropriately. */
+ * be set appropriately. */
 static gboolean process_OTG_file (FImport *fimp, FContents *cts,
 				  const gchar *plname)
 {
@@ -2896,7 +2848,7 @@ static gboolean read_OTG_playlists (FImport *fimp)
    (this is treated as a programming error) */
 /* Return value:
    TRUE: import successful
-   FALSE: error occured, fimp->error is set */
+   FALSE: error occurred, fimp->error is set */
 static gboolean parse_tracks (FImport *fimp, glong mhsd_seek)
 {
     FContents *cts;
@@ -2961,7 +2913,7 @@ static gboolean parse_tracks (FImport *fimp, glong mhsd_seek)
    mhsd (this is treated as a programming error) */
 /* Return value:
    TRUE: import successful
-   FALSE: error occured, fimp->error is set */
+   FALSE: error occurred, fimp->error is set */
 static gboolean parse_playlists (FImport *fimp, glong mhsd_seek)
 {
     FContents *cts;
@@ -3291,7 +3243,7 @@ itdb_parse_internal (Itdb_iTunesDB *itdb, gboolean compressed, GError **error)
 	itdb_hash72_extract_hash_info (fimp->itdb->device,
 				       (guchar *)fimp->fcontents->contents,
 				       fimp->fcontents->length);
-	if (playcounts_init (fimp))
+	if (!playcounts_init (fimp))
 	{
 	    g_warning ("Error parsing recent playcounts");
 	}
@@ -3428,7 +3380,7 @@ Itdb_iTunesDB *itdb_parse_file (const gchar *filename, GError **error)
 /* ---------------------------------------------------------------------- */
 /* from here on we have the functions for writing the iTunesDB            */
 
-/* will expand @cts when necessary in order to accomodate @len bytes
+/* will expand @cts when necessary in order to accommodate @len bytes
    starting at @seek */
 static void wcontents_maybe_expand (WContents *cts, gulong len,
 				    gulong seek)
@@ -3485,7 +3437,7 @@ static void put_string (WContents *cts, gchar *string)
 }
 
 /* Write 4-byte long @header identifcation taking into account
- * possible reversed endianess */
+ * possible reversed endianness */
 static void put_header (WContents *cts, gchar *header)
 {
     gchar rdata[4];
@@ -3859,7 +3811,7 @@ static void mk_mhbd (FExport *fexp, guint32 children)
 
   /* 0x22 */
   put16lint (cts, fexp->itdb->priv->unk_0x22);  /* unknown */
-  put64lint (cts, fexp->itdb->priv->id_0x24); /* unkown id */
+  put64lint (cts, fexp->itdb->priv->id_0x24); /* unknown id */
   put32lint (cts, 0);  /* unknown */
   /* 0x30 */
   put16lint (cts, 0);   /* set hashing scheme to 0 for now, will be set
@@ -5339,7 +5291,6 @@ static void write_one_podcast_group (gpointer key, gpointer value,
     WContents *cts;
     glong mhip_seek;
     guint32 groupid;
-    Itdb_iTunesDB *itdb;
     MHODData mhod;
 
     g_return_if_fail (album);
@@ -5349,7 +5300,6 @@ static void write_one_podcast_group (gpointer key, gpointer value,
     g_return_if_fail (fexp->wcontents);
 
     cts = fexp->wcontents;
-    itdb = fexp->itdb;
     mhip_seek = cts->pos;
 
     groupid = fexp->next_id++;
@@ -5980,7 +5930,7 @@ static gboolean itdb_write_file_internal (Itdb_iTunesDB *itdb,
 
     if (!filename) filename = itdb->filename;
 
-    /* set endianess flag */
+    /* set endianness flag */
     if (!itdb->device->byte_order)
 	itdb_device_autodetect_endianess (itdb->device);
 
@@ -6818,7 +6768,6 @@ static gboolean write_bdhs (FExport *fexp)
 	WContents *cts;
 	gulong bdhs_seek;
 	guint32 trackcnt;
-	guint32 playlistcnt;
 
 	g_return_val_if_fail (fexp, FALSE);
 	g_return_val_if_fail (fexp->itdb, FALSE);
@@ -6827,7 +6776,6 @@ static gboolean write_bdhs (FExport *fexp)
 	cts = fexp->wcontents;
 	bdhs_seek = cts->pos;
 	trackcnt = itdb_tracks_number (fexp->itdb);
-	playlistcnt = itdb_playlists_number (fexp->itdb);
 
 	put_header (cts, "bdhs");
 	put32lint (cts, 0x02000003); /* Unknown */
@@ -6885,7 +6833,7 @@ gboolean itdb_shuffle_write_file (Itdb_iTunesDB *itdb,
     g_return_val_if_fail (filename, FALSE);
     g_return_val_if_fail (itdb->device, FALSE);
 
-    /* Set endianess flag just in case */
+    /* Set endianness flag just in case */
     if (!itdb->device->byte_order)
 	    itdb_device_autodetect_endianess (itdb->device);
 
@@ -7054,7 +7002,7 @@ gboolean itdb_rename_files (const gchar *mp, GError **error)
     if (plcname_o)
     {
 	if (rename (plcname_o, plcname_n) == -1)
-	{   /* an error occured */
+	{   /* an error occurred */
 	    g_set_error (error,
 			 G_FILE_ERROR,
 			 g_file_error_from_errno (errno),
@@ -7902,14 +7850,7 @@ gchar *itdb_get_device_dir (const gchar *mountpoint)
 {
     g_return_val_if_fail (mountpoint, NULL);
 
-    if (device_dir_resolution_func)
-    {
-    return device_dir_resolution_func(mountpoint);
-    }
-    else
-    {
     return itdb_get_dir (mountpoint, "Device");
-    }
 }
 
 /**
@@ -8344,7 +8285,7 @@ static gboolean itdb_create_directories (Itdb_Device *device, GError **error)
     gboolean result;
     gchar *pbuf;
     gint i, dirnum;
-    gchar *podpath;
+    gchar *podpath = NULL;
     gchar *model_number;
     Itdb_IpodInfo const *info = NULL;
 
@@ -8527,21 +8468,4 @@ static gboolean itdb_create_directories (Itdb_Device *device, GError **error)
     g_free (pbuf);
     g_free (podpath);
     return result;
-}
-
-
-/*------------------------------------------------------------------*\
- *                                                                  *
- *             Third party integration                              *
- *                                                                  *
-\*------------------------------------------------------------------*/
-
-void itdb_set_device_dir_resolution (ItdbDeviceDirResolutionFunc func)
-{
-    device_dir_resolution_func = func;
-}
-
-ItdbDeviceDirResolutionFunc itdb_get_device_dir_resolution (void)
-{
-    return device_dir_resolution_func;
 }
