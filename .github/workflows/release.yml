@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux-x86_64
+            target: ""
+          - os: ubuntu-24-04-arm
+            name: linux-arm64
+            target: ""
+          - os: macos-14
+            name: macos-modern-arm64
+            target: ""
+          - os: macos-14
+            name: macos-legacy-intel-10.13
+            target: "10.13"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build pkg-config libglib2.0-dev libplist-dev libsqlite3-dev libgdk-pixbuf2.0-dev libxml2-dev zlib1g-dev
+
+      - name: Install Dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install ninja pkg-config glib pcre2 libffi libplist sqlite gdk-pixbuf libxml2
+
+      - name: Configure CMake
+        shell: bash
+        run: |
+          if [ -n "${{ matrix.target }}" ]; then
+            # Legacy Intel build targeting older macOS versions
+            cmake -S . -B build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_OSX_DEPLOYMENT_TARGET="${{ matrix.target }}" \
+              -DCMAKE_OSX_ARCHITECTURES="x86_64"
+          else
+            # Standard modern build
+            cmake -S . -B build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release
+          fi
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Stage Installation Files
+        run: cmake --install build --prefix ./install-pkg
+
+      - name: Package Artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+          tar -czf dist/libgpod-${{ matrix.name }}.tar.gz -C install-pkg .
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libgpod-${{ matrix.name }}
+          path: dist/*.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release & Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
