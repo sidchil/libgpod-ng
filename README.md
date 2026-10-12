@@ -13,9 +13,8 @@ sudo apt install cmake ninja-build pkg-config libglib2.0-dev libplist-dev libsql
                  libgdk-pixbuf-2.0-dev libxml2-dev zlib1g-dev
 
 # macOS (Homebrew)
-brew install cmake ninja pkg-config glib libplist sqlite gdk-pixbuf libxml2
-export PKG_CONFIG_PATH="$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix sqlite)/lib/pkgconfig"
-
+brew install cmake ninja pkg-config glib libplist sqlite gdk-pixbuf libxml2 pcre2
+export PKG_CONFIG_PATH="$(brew --prefix pcre2)/lib/pkgconfig:$(brew --prefix glib)/lib/pkgconfig:$(brew --prefix libffi)/lib/pkgconfig:$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix sqlite)/lib/pkgconfig"
 # Windows (MSYS2 MINGW64)
 pacman -S mingw-w64-x86_64-{toolchain,cmake,ninja,pkgconf,glib2,libplist,sqlite3,gdk-pixbuf2,libxml2,zlib}
 ```
