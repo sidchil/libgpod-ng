@@ -22,7 +22,7 @@ jobs:
           - os: macos-14
             name: macos-modern-arm64
             target: ""
-          - os: macos-14
+          - os: macos-15-intel
             name: macos-legacy-intel-10.13
             target: "10.13"
 
@@ -45,13 +45,11 @@ jobs:
         shell: bash
         run: |
           if [ -n "${{ matrix.target }}" ]; then
-            # Legacy Intel build targeting older macOS versions
             cmake -S . -B build -G Ninja \
               -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_OSX_DEPLOYMENT_TARGET="${{ matrix.target }}" \
               -DCMAKE_OSX_ARCHITECTURES="x86_64"
           else
-            # Standard modern build
             cmake -S . -B build -G Ninja \
               -DCMAKE_BUILD_TYPE=Release
           fi
