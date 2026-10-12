@@ -1,4 +1,4 @@
-# libgpod
+# libgpod-ng
 
 Library for reading and writing the database on an iPod: iTunesDB, ArtworkDB and the photo database.
 This is a fork of libgpod 0.8.3 that builds with CMake on Linux, macOS and Windows.
