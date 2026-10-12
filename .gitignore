@@ -117,3 +117,5 @@ bindings/mono/libgpod-sharp/libgpod-sharp.pidb
 /tools/ipod-read-sysinfo-extended
 /tools/ipod-time-sync
 /tools/libgpod-callout
+
+/.DS_Store
