@@ -28,6 +28,7 @@ endif()
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLIB   REQUIRED IMPORTED_TARGET glib-2.0>=2.32 gobject-2.0 gmodule-2.0)
+pkg_check_modules(GMODULE REQUIRED IMPORTED_TARGET gmodule-2.0)
 pkg_check_modules(SQLITE REQUIRED IMPORTED_TARGET sqlite3)
 pkg_check_modules(PLIST  IMPORTED_TARGET libplist-2.0)
 if(NOT PLIST_FOUND)
